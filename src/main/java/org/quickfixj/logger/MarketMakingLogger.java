@@ -8,7 +8,7 @@ public class MarketMakingLogger {
     }
 
     public void info(String log) {
-        System.out.printf("LOG(%s): %s%n", clazz.getName(), log );
+//        System.out.printf("LOG(%s): %s%n", clazz.getName(), log );
     }
 
     public static MarketMakingLogger create(Class<?> clazz) {

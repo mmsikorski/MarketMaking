@@ -1,4 +1,6 @@
 package org.quickfixj.domain.kraken;
 
-public record TradeModel(){
+import org.quickfixj.orderbook.OrderSide;
+
+public record TradeModel(OrderSide orderSide, Double price, Double quantity, String ticker){
 }

@@ -3,6 +3,9 @@ package org.quickfixj;
 import org.quickfixj.domain.kraken.BuiltInSubscriptions;
 import org.quickfixj.domain.kraken.MessageType;
 import org.quickfixj.domain.kraken.Subscriptions;
+import org.quickfixj.domain.kraken.TradeModel;
+import org.quickfixj.engine.AskBidProcessor;
+import org.quickfixj.engine.OutputApi;
 import org.quickfixj.handler.HandlerGenerator;
 import org.quickfixj.orderbook.OrderBook;
 import org.quickfixj.orderbook.OrderBookSnapshot;
@@ -11,6 +14,7 @@ import org.quickfixj.orderbook.OrderSide;
 import org.quickfixj.rest.RestApiExecutor;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -25,6 +29,8 @@ public class Main {
 
         RestApiExecutor restApiExecutor = new RestApiExecutor();
         restApiExecutor.fetchDataInSeparatedThread();
+        OutputApi outputApi = new OutputApi();
+        AskBidProcessor processor = new AskBidProcessor();
 //        restApiExecutor.fetchData();
 
         HandlerGenerator handlerGenerator = new HandlerGenerator();
@@ -44,12 +50,20 @@ public class Main {
 
 
         OrderBookSnapshot orderBookSnapshot = new OrderBookSnapshot();
-        Runnable taskAsks = () -> orderBookSnapshot.orderBookLevels(OrderBookStaticFactory.getOrderBook(), OrderSide.ASK, 8);
-        Runnable taskBids = () -> orderBookSnapshot.orderBookLevels(OrderBookStaticFactory.getOrderBook(), OrderSide.BID, 8);
+        Runnable task = () -> {
+            orderBookSnapshot.orderBookLevels(OrderBookStaticFactory.getOrderBook(), OrderSide.ASK, 8);
+            orderBookSnapshot.orderBookLevels(OrderBookStaticFactory.getOrderBook(), OrderSide.BID, 8);
+            Optional<AskBidProcessor.AskAndBidOrders> askAndBidOrders = processor.analyzeOrderBookData();
+            askAndBidOrders.ifPresent(r -> {
+                TradeModel askOrder = r.askOrder();
+                TradeModel bidOrder = r.bidOrder();
+                outputApi.placeOrder(askOrder);
+                outputApi.placeOrder(bidOrder);
+            });
+        };
 
         ScheduledExecutorService executorService = Executors.newScheduledThreadPool(2);
-        executorService.scheduleAtFixedRate(taskAsks, 5, 5, TimeUnit.SECONDS);
-        executorService.scheduleAtFixedRate(taskBids, 5, 5, TimeUnit.SECONDS);
+        executorService.scheduleAtFixedRate(task, 5, 2, TimeUnit.SECONDS);
 
 
     }

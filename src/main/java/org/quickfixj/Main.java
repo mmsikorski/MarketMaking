@@ -13,6 +13,7 @@ import org.quickfixj.orderbook.OrderBookStaticFactory;
 import org.quickfixj.orderbook.OrderSide;
 import org.quickfixj.rest.RestApiExecutor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executors;
@@ -35,8 +36,8 @@ public class Main {
 
         HandlerGenerator handlerGenerator = new HandlerGenerator();
 
-//        List<String> subscriptions = List.of(BuiltInSubscriptions.TICKER_BTC_USD);
-//        handlerGenerator.generate(new Subscriptions(subscriptions), wsUrl, MessageType.TICKER);
+        List<String> subscriptions = List.of(BuiltInSubscriptions.TICKER_BTC_USD);
+        handlerGenerator.generate(new Subscriptions(subscriptions), wsUrl, MessageType.TICKER);
 
 
 //        handlerGenerator.generate(new Subscriptions(
@@ -51,15 +52,26 @@ public class Main {
 
         OrderBookSnapshot orderBookSnapshot = new OrderBookSnapshot();
         Runnable task = () -> {
-            orderBookSnapshot.orderBookLevels(OrderBookStaticFactory.getOrderBook(), OrderSide.ASK, 8);
-            orderBookSnapshot.orderBookLevels(OrderBookStaticFactory.getOrderBook(), OrderSide.BID, 8);
-            Optional<AskBidProcessor.AskAndBidOrders> askAndBidOrders = processor.analyzeOrderBookData();
+            long start = System.currentTimeMillis();
+            System.out.println("\nSTART ANALYSE! " + start);
+            OrderBook orderBook = OrderBookStaticFactory.getOrderBook();
+            orderBookSnapshot.orderBookLevels(orderBook, OrderSide.ASK, 8);
+            orderBookSnapshot.orderBookLevels(orderBook, OrderSide.BID, 8);
+            Double lastTradePrice = orderBook.getLastTradePrice();
+            Double lastTradeQuantity = orderBook.getLastTradeQuantity();
+            System.out.println("LAST TRADE: " + lastTradePrice + "| quantity: " + lastTradeQuantity);
+            Optional<AskBidProcessor.AskAndBidOrders> askAndBidOrders = processor.makeTradingDecision(orderBook);
             askAndBidOrders.ifPresent(r -> {
                 TradeModel askOrder = r.askOrder();
                 TradeModel bidOrder = r.bidOrder();
+                System.out.println("Order to Execute: " + r);
                 outputApi.placeOrder(askOrder);
                 outputApi.placeOrder(bidOrder);
             });
+            long end = System.currentTimeMillis();
+            System.out.println("\nEND ANALYSE! " + end);
+            System.out.println("\n Time diff " + String.valueOf(end - start));
+
         };
 
         ScheduledExecutorService executorService = Executors.newScheduledThreadPool(2);

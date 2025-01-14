@@ -75,5 +75,22 @@ public class OrderBookSnapshot {
         System.out.println("==================================================================");
     }
 
+    public static Map.Entry<Double, Double> getNthLevel(OrderBook orderBookL, OrderSide side, int n) {
+        NavigableMap<Double, Double> orderBook = orderBookL.getBidsOrAsks(side);
+        if (n <= 0 || n > orderBook.size()) {
+            throw new IllegalArgumentException("Invalid level: " + n);
+        }
+
+        int currentIndex = 1;
+        for (Map.Entry<Double, Double> entry : orderBook.entrySet()) {
+            if (currentIndex == n) {
+                return entry;
+            }
+            currentIndex++;
+        }
+
+        return null; // Should never reach here due to bounds check
+    }
+
 
 }

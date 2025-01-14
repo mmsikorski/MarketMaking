@@ -34,7 +34,6 @@ public class RestApi {
                     .build();
 
             // Execute the request
-
             try (Response response = client.newCall(request).execute()) {
                 if (!response.isSuccessful()) {
                     System.err.println("HTTP error: " + response.code());
